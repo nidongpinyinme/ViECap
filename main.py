@@ -66,6 +66,7 @@ def train(
         num_training_steps=epochs * len(dataloader),
     )
     scaler = torch.cuda.amp.GradScaler(enabled=args.use_amp)
+
     for epoch in range(epochs):
         # visualization
         sys.stdout.flush()
@@ -100,7 +101,8 @@ def train(
                 ).float()  # caption_clip -> embeddings, (b, clip_hidden_size)
 
             if args.normalize_prefix:
-                continuous_prefix /= continuous_prefix.norm(2, dim=-1, keepdim=True)
+                continuous_prefix /= continuous_prefix.norm(
+                    2, dim=-1, keepdim=True)
             continuous_prefix = noise_injection(
                 continuous_prefix, variance=args.noise_variance, device=args.device
             )
@@ -112,16 +114,20 @@ def train(
 
             with torch.cuda.amp.autocast(enabled=args.use_amp):
                 if args.using_hard_prompt:
-                    outputs = model(
+                    outputs, prior_loss = model(
+                        captions_clip_tokens,
                         continuous_prefix,
                         captions_gpt_tokens,
                         hard_prompts_length,
                         masks,
                     )
-                    logits = outputs.logits  # (batch_size, max_length, vocab_size)
+                    # (batch_size, max_length, vocab_size)
+                    logits = outputs.logits
                 else:
-                    outputs = model(continuous_prefix, captions_gpt_tokens, mask=masks)
-                    logits = outputs.logits  # (batch_size, max_length, vocab_size)
+                    outputs, prior_loss = model(captions_clip_tokens, continuous_prefix,
+                                                captions_gpt_tokens, mask=masks)
+                    # (batch_size, max_length, vocab_size)
+                    logits = outputs.logits
             captions_tokens_for_loss = captions_tokens_for_loss.masked_fill(
                 captions_tokens_for_loss == tokenizer.eos_token_id, 0
             )
@@ -132,7 +138,7 @@ def train(
                 captions_tokens_for_loss.flatten(),
                 ignore_index=0,
             )
-            scaler.scale(loss).backward()
+            scaler.scale(loss+prior_loss).backward()
             scaler.step(optimizer)
             scaler.update()
             schedular.step()
@@ -140,7 +146,8 @@ def train(
             progress.set_postfix({"loss": loss.item()})
             progress.update()
             train_loss_sum += loss.item()
-            log_iters = len(dataloader) // 5 if len(dataloader) > 5 else len(dataloader)
+            log_iters = len(
+                dataloader) // 5 if len(dataloader) > 5 else len(dataloader)
             if (idx + 1) % (log_iters) == 0:
                 print(
                     "epoch {}, iter {}, average train loss: {}".format(
@@ -154,7 +161,8 @@ def train(
                 )
         progress.close()
         if (epoch + 1) % args.save_every == 0 or epoch == epochs - 1:
-            ckpt_path = os.path.join(output_dir, f"{output_prefix}-00{epoch}.pt")
+            ckpt_path = os.path.join(
+                output_dir, f"{output_prefix}-00{epoch}.pt")
             torch.save(model.state_dict(), ckpt_path)
             print(f"saving checkpoint to {ckpt_path}")
 
@@ -168,7 +176,8 @@ def main():
         "--lr", type=float, default=2e-5, help="learning rate for training"
     )
     parser.add_argument("--device", default="cuda:0", help="gpu for training")
-    parser.add_argument("--epochs", type=int, default=15, help="number of epochs")
+    parser.add_argument("--epochs", type=int, default=15,
+                        help="number of epochs")
     parser.add_argument(
         "--random_mask",
         action="store_true",
@@ -220,7 +229,7 @@ def main():
     parser.add_argument(
         "--using_clip_features",
         action="store_true",
-        default=True,
+        default=False,
         help="whether to use the pre-extracted features",
     )
     parser.add_argument(
@@ -236,7 +245,7 @@ def main():
     parser.add_argument(
         "--using_hard_prompt",
         action="store_true",
-        default=True,
+        default=False,
         help="whether to entity-aware hard prompts",
     )
     parser.add_argument(
@@ -271,7 +280,7 @@ def main():
     )
     parser.add_argument(
         "--path_of_datasets",
-        default="../../../dataset/coco/annotations/coco_texts_features_ViT-L14.pickle",
+        default="../../../dataset/coco/annotations/coco_with_entities.pickle",
     )
 
     now = datetime.datetime.now()
@@ -288,7 +297,8 @@ def main():
         default=True,
         help="normalizing prefix",
     )
-    parser.add_argument("--name_of_objects_vocabs", default="visual_genome_entities")
+    parser.add_argument("--name_of_objects_vocabs",
+                        default="visual_genome_entities")
     parser.add_argument(
         "--path_of_objects_vocabs",
         default="../../../dataset/annotations/vocabulary/all_objects_attributes_relationships.pickle",
@@ -357,7 +367,8 @@ def main():
     # 加载checkpoint
     if args.checkpoint:
         model.load_state_dict(torch.load(args.checkpoint))
-    train(args, datasets, model, output_dir=args.out_dir, output_prefix=args.prefix)
+    train(args, datasets, model, output_dir=args.out_dir,
+          output_prefix=args.prefix)
 
 
 if __name__ == "__main__":

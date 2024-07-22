@@ -13,10 +13,12 @@ def main(captions: List[str], path: str) -> None:
     new_captions = []
     for caption in captions:
         detected_entities = []
-        pos_tags = nltk.pos_tag(nltk.word_tokenize(caption))  # [('woman': 'NN'), ...]
+        pos_tags = nltk.pos_tag(nltk.word_tokenize(
+            caption))  # [('woman': 'NN'), ...]
         for entities_with_pos in pos_tags:
             if entities_with_pos[1] == "NN" or entities_with_pos[1] == "NNS":
-                entity = lemmatizer.lemmatize(entities_with_pos[0].lower().strip())
+                entity = lemmatizer.lemmatize(
+                    entities_with_pos[0].lower().strip())
                 detected_entities.append(entity)
         detected_entities = list(set(detected_entities))
         new_captions.append([detected_entities, caption])
