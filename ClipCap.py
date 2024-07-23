@@ -48,8 +48,7 @@ class MultiHeadAttention(nn.Module):
         self.scale = self.head_size**-0.5  # normalization factor for each head
         self.to_queries = nn.Linear(query_size, query_size, bias=bias)
         #  projecting key and value together and spliting them for computing efficiently
-        self.to_keys_values = nn.Linear(
-            key_value_size, 2 * query_size, bias=bias)
+        self.to_keys_values = nn.Linear(key_value_size, 2 * query_size, bias=bias)
         self.project = nn.Linear(query_size, query_size)
         self.dropout = nn.Dropout(dropout)
 
@@ -185,8 +184,7 @@ class MappingNetwork(nn.Module):
         super(MappingNetwork, self).__init__()
         self.clip_project_length = clip_project_length
         # projector for input
-        self.linear = nn.Linear(
-            clip_hidden_size, clip_project_length * d_model)
+        self.linear = nn.Linear(clip_hidden_size, clip_project_length * d_model)
         # learnable prefix embeddings
         self.prefix_const = nn.Parameter(
             torch.randn(prefix_length, d_model), requires_grad=True
@@ -212,7 +210,7 @@ class MappingNetwork(nn.Module):
             (x, prefix), dim=1
         )  # (b, clip_project_length + prefix_length, d_model)
         outputs = self.transformer(inputs)[
-            :, self.clip_project_length:, :
+            :, self.clip_project_length :, :
         ]  # (b, prefix_length, d_model)
 
         return outputs
@@ -225,8 +223,7 @@ def get_language_mode(lm_type):
     elif "opt" in lm_type:
         from modeling_opt import OPTForCausalLM
 
-        model = OPTForCausalLM.from_pretrained(
-            lm_type, torch_dtype=torch.float16)
+        model = OPTForCausalLM.from_pretrained(lm_type, torch_dtype=torch.float16)
         hidden_size = model.config.word_embed_proj_dim
     return model, hidden_size
 
@@ -239,6 +236,7 @@ def get_prior_model(config, weight):
     prior_model_state = torch.load(weight)
     prior.load_state_dict(prior_model_state, strict=True)
     prior.eval()
+    return prior
 
 
 class ClipCaptionModel(nn.Module):
@@ -246,7 +244,7 @@ class ClipCaptionModel(nn.Module):
     def __init__(
         self,
         continuous_length: int = 10,
-        clip_project_length: int = 15,
+        clip_project_length: int = 10,
         clip_hidden_size: int = 768,
         num_layers: int = 8,
         num_heads: int = 8,
@@ -281,7 +279,9 @@ class ClipCaptionModel(nn.Module):
         self.gpt_type = gpt_type
 
         self.prior = get_prior_model(
-            "../../checkpoints/DALLE/prior_config.json", "../../checkpoints/DALLE/prior.pth")
+            "../../../checkpoints/DALLE/prior_config.json",
+            "../../../checkpoints/DALLE/prior.pth",
+        )
 
     def word_embed(self, caption_tokens):
         if "gpt" in self.gpt_type:
@@ -289,8 +289,7 @@ class ClipCaptionModel(nn.Module):
                 caption_tokens
             )  # (b, caption_length, gpt_hidden_size)
         elif "opt" in self.gpt_type:
-            caption_embeddings = self.gpt.model.decoder.embed_tokens(
-                caption_tokens)
+            caption_embeddings = self.gpt.model.decoder.embed_tokens(caption_tokens)
         return caption_embeddings
 
     def forward(
@@ -315,15 +314,19 @@ class ClipCaptionModel(nn.Module):
         # continuous_embeddings 用作软提示
         # 100, 63, 768
         caption_embeddings = self.word_embed(caption_tokens)
-        # 100, 10, 768
-
+        # 80, 10, 768
         continuous_embeddings = self.mapping_network(continuous_prompt).view(
             # (b, continuous_length, gpt_hidden_size)
-            -1, self.continuous_length, self.gpt_hidden_size)
+            -1,
+            self.continuous_length,
+            self.gpt_hidden_size,
+        )
         # todo:验证可行性
+        # 80, 768
         priored_samlpe = self.prior.sample(captions_clip_tokens)
         priored_embeddings = self.mapping_network(priored_samlpe).view(
-            -1, self.continuous_length, self.gpt_hidden_size)
+            -1, self.continuous_length, self.gpt_hidden_size
+        )
         loss = nn.MSELoss()
         prior_loss = loss(continuous_embeddings, priored_embeddings)
         if hard_prompts_length is not None:  # with hard prompts
@@ -348,8 +351,7 @@ class ClipCaptionModel(nn.Module):
                     if embeddings is None:
                         embeddings = temp_embeddings
                     else:
-                        embeddings = torch.cat(
-                            (embeddings, temp_embeddings), dim=0)
+                        embeddings = torch.cat((embeddings, temp_embeddings), dim=0)
         else:  # without hard prompts
             embeddings = torch.cat(
                 (continuous_embeddings, caption_embeddings), dim=1

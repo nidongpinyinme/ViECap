@@ -101,8 +101,7 @@ def train(
                 ).float()  # caption_clip -> embeddings, (b, clip_hidden_size)
 
             if args.normalize_prefix:
-                continuous_prefix /= continuous_prefix.norm(
-                    2, dim=-1, keepdim=True)
+                continuous_prefix /= continuous_prefix.norm(2, dim=-1, keepdim=True)
             continuous_prefix = noise_injection(
                 continuous_prefix, variance=args.noise_variance, device=args.device
             )
@@ -124,8 +123,12 @@ def train(
                     # (batch_size, max_length, vocab_size)
                     logits = outputs.logits
                 else:
-                    outputs, prior_loss = model(captions_clip_tokens, continuous_prefix,
-                                                captions_gpt_tokens, mask=masks)
+                    outputs, prior_loss = model(
+                        captions_clip_tokens,
+                        continuous_prefix,
+                        captions_gpt_tokens,
+                        mask=masks,
+                    )
                     # (batch_size, max_length, vocab_size)
                     logits = outputs.logits
             captions_tokens_for_loss = captions_tokens_for_loss.masked_fill(
@@ -138,7 +141,7 @@ def train(
                 captions_tokens_for_loss.flatten(),
                 ignore_index=0,
             )
-            scaler.scale(loss+prior_loss).backward()
+            scaler.scale(loss + prior_loss).backward()
             scaler.step(optimizer)
             scaler.update()
             schedular.step()
@@ -146,8 +149,7 @@ def train(
             progress.set_postfix({"loss": loss.item()})
             progress.update()
             train_loss_sum += loss.item()
-            log_iters = len(
-                dataloader) // 5 if len(dataloader) > 5 else len(dataloader)
+            log_iters = len(dataloader) // 5 if len(dataloader) > 5 else len(dataloader)
             if (idx + 1) % (log_iters) == 0:
                 print(
                     "epoch {}, iter {}, average train loss: {}".format(
@@ -161,8 +163,7 @@ def train(
                 )
         progress.close()
         if (epoch + 1) % args.save_every == 0 or epoch == epochs - 1:
-            ckpt_path = os.path.join(
-                output_dir, f"{output_prefix}-00{epoch}.pt")
+            ckpt_path = os.path.join(output_dir, f"{output_prefix}-00{epoch}.pt")
             torch.save(model.state_dict(), ckpt_path)
             print(f"saving checkpoint to {ckpt_path}")
 
@@ -176,8 +177,7 @@ def main():
         "--lr", type=float, default=2e-5, help="learning rate for training"
     )
     parser.add_argument("--device", default="cuda:0", help="gpu for training")
-    parser.add_argument("--epochs", type=int, default=15,
-                        help="number of epochs")
+    parser.add_argument("--epochs", type=int, default=10, help="number of epochs")
     parser.add_argument(
         "--random_mask",
         action="store_true",
@@ -194,7 +194,7 @@ def main():
         "--prob_of_random_mask", type=float, default=0.4, help="masking rate"
     )
     parser.add_argument(
-        "--clip_project_length", type=int, default=15, help="clip projecting length"
+        "--clip_project_length", type=int, default=10, help="clip projecting length"
     )
     parser.add_argument(
         "--continuous_prompt_length", type=int, default=10, help="soft prompts length"
@@ -297,8 +297,7 @@ def main():
         default=True,
         help="normalizing prefix",
     )
-    parser.add_argument("--name_of_objects_vocabs",
-                        default="visual_genome_entities")
+    parser.add_argument("--name_of_objects_vocabs", default="visual_genome_entities")
     parser.add_argument(
         "--path_of_objects_vocabs",
         default="../../../dataset/annotations/vocabulary/all_objects_attributes_relationships.pickle",
@@ -367,8 +366,7 @@ def main():
     # 加载checkpoint
     if args.checkpoint:
         model.load_state_dict(torch.load(args.checkpoint))
-    train(args, datasets, model, output_dir=args.out_dir,
-          output_prefix=args.prefix)
+    train(args, datasets, model, output_dir=args.out_dir, output_prefix=args.prefix)
 
 
 if __name__ == "__main__":

@@ -171,6 +171,8 @@ def validation_coco_flickr30k(
         with open(inpath, "r") as infile:
             annotations = json.load(infile)  # {image_path: [caption1, caption2, ...]}
 
+    if args.debug:
+        annotations = annotations[:500]
     predicts = []
     for idx, item in tqdm(enumerate(annotations)):
         if args.using_image_features:
@@ -406,7 +408,7 @@ def main(args) -> None:
                     texts_embeddings,
                     model,
                     tokenizer,
-                    tag=i,
+                    tag=file.replace(".pt", ""),
                 )
             else:
                 validation_coco_flickr30k(
@@ -429,7 +431,7 @@ if __name__ == "__main__":
     parser.add_argument("--clip_model", default="ViT-L/14")
     parser.add_argument("--language_model", default="gpt2")
     parser.add_argument("--continuous_prompt_length", type=int, default=10)
-    parser.add_argument("--clip_project_length", type=int, default=15)
+    parser.add_argument("--clip_project_length", type=int, default=10)
     parser.add_argument("--temperature", type=float, default=0.01)
     parser.add_argument("--top_k", type=int, default=3)
     parser.add_argument("--threshold", type=float, default=0.4)
@@ -464,7 +466,7 @@ if __name__ == "__main__":
         ),
     )
     parser.add_argument("--prompt_ensemble", action="store_true", default=True)
-    parser.add_argument("--weight_path", default="./checkpoints/2024-07-20_15-45-46/")
+    parser.add_argument("--weight_path", default="./checkpoints/2024-07-21_09-47-08/")
 
     now = datetime.datetime.now()
     date_time_str = now.strftime("%Y-%m-%d_%H-%M-%S")
