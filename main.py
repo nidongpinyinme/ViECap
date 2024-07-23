@@ -113,7 +113,7 @@ def train(
 
             with torch.cuda.amp.autocast(enabled=args.use_amp):
                 if args.using_hard_prompt:
-                    outputs, prior_loss = model(
+                    logits, prior_logits, prior_dis_loss = model(
                         captions_clip_tokens,
                         continuous_prefix,
                         captions_gpt_tokens,
@@ -121,16 +121,18 @@ def train(
                         masks,
                     )
                     # (batch_size, max_length, vocab_size)
-                    logits = outputs.logits
+                    # logits = outputs.logits
+                    # prior_logits = prior_out.logits
                 else:
-                    outputs, prior_loss = model(
+                    logits, prior_logits, prior_dis_loss = model(
                         captions_clip_tokens,
                         continuous_prefix,
                         captions_gpt_tokens,
                         mask=masks,
                     )
                     # (batch_size, max_length, vocab_size)
-                    logits = outputs.logits
+                    # logits = outputs.logits
+                    # prior_logits = prior_out.logits
             captions_tokens_for_loss = captions_tokens_for_loss.masked_fill(
                 captions_tokens_for_loss == tokenizer.eos_token_id, 0
             )
@@ -141,14 +143,29 @@ def train(
                 captions_tokens_for_loss.flatten(),
                 ignore_index=0,
             )
-            scaler.scale(loss + prior_loss).backward()
+            prior_loss = nnf.cross_entropy(
+                prior_logits.reshape(-1, prior_logits.shape[-1]),
+                captions_tokens_for_loss.flatten(),
+                ignore_index=0,
+            )
+            # scaler.scale(loss + prior_dis_loss * 100).backward()
+            scaler.scale(loss + prior_loss + prior_dis_loss * 100).backward()
             scaler.step(optimizer)
             scaler.update()
             schedular.step()
             optimizer.zero_grad()
-            progress.set_postfix({"loss": loss.item()})
+            total_loss = (
+                loss.item() + prior_loss.item() + prior_dis_loss.item() * 100
+            ) / 3
+            progress.set_postfix(
+                {
+                    "loss": total_loss,
+                    "cur_dis": (loss.item() + prior_loss.item()) / 2
+                    - prior_dis_loss.item() * 100,
+                }
+            )
             progress.update()
-            train_loss_sum += loss.item()
+            train_loss_sum += total_loss
             log_iters = len(dataloader) // 5 if len(dataloader) > 5 else len(dataloader)
             if (idx + 1) % (log_iters) == 0:
                 print(

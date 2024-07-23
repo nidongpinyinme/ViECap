@@ -356,12 +356,16 @@ class ClipCaptionModel(nn.Module):
             embeddings = torch.cat(
                 (continuous_embeddings, caption_embeddings), dim=1
             )  # (b, continuous_length + caption_length, gpt_hidden_size)
-
+        prior_embedding = torch.cat((priored_embeddings, caption_embeddings), dim=1)
         out = self.gpt(
             inputs_embeds=embeddings.type(self.gpt.dtype), attention_mask=mask
         )
+        prior_out = self.gpt(
+            inputs_embeds=prior_embedding.type(self.gpt.dtype), attention_mask=mask
+        )
+        # prior_out = []
 
-        return out, prior_loss
+        return out.logits, prior_out.logits, prior_loss
 
 
 class ClipCaptionPrefix(ClipCaptionModel):
