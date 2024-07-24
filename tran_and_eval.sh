@@ -19,8 +19,8 @@ mkdir -p $out_dir
 echo "=====================training============================="
 echo "RUNNING EXPERIMENTS: $log_name, saving in $out_dir"
 
-echo "python main.py --epochs 1 --out_dir $out_dir/checkpoints/ | tee -a  ${LOG_FILE}"
-python main.py --epochs 10 --out_dir $out_dir/checkpoints/ | tee -a  ${LOG_FILE}
+echo "python main.py --epochs 1 --out_dir $out_dir/checkpoints/ --frozen_gpt| tee -a  ${LOG_FILE}"
+python main.py --epochs 1 --out_dir $out_dir/checkpoints/ --frozen_gpt| tee -a  ${LOG_FILE}
 
 echo "=======================Validation=========================="
 echo "python validation.py  --weight_path $out_dir/checkpoints/ --out_path $out_dir/outputs | tee -a  ${LOG_FILE}"

@@ -360,12 +360,13 @@ class ClipCaptionModel(nn.Module):
         out = self.gpt(
             inputs_embeds=embeddings.type(self.gpt.dtype), attention_mask=mask
         )
-        prior_out = self.gpt(
-            inputs_embeds=prior_embedding.type(self.gpt.dtype), attention_mask=mask
-        )
-        # prior_out = []
+        # prior_out = self.gpt(
+        #     inputs_embeds=prior_embedding.type(self.gpt.dtype), attention_mask=mask
+        # )
+        # prior_logits = prior_out.logits
+        prior_logits = 0
 
-        return out.logits, prior_out.logits, prior_loss
+        return out.logits, prior_logits, prior_loss
 
 
 class ClipCaptionPrefix(ClipCaptionModel):

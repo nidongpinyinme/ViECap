@@ -143,29 +143,26 @@ def train(
                 captions_tokens_for_loss.flatten(),
                 ignore_index=0,
             )
-            prior_loss = nnf.cross_entropy(
-                prior_logits.reshape(-1, prior_logits.shape[-1]),
-                captions_tokens_for_loss.flatten(),
-                ignore_index=0,
-            )
+            # prior_loss = nnf.cross_entropy(
+            #     prior_logits.reshape(-1, prior_logits.shape[-1]),
+            #     captions_tokens_for_loss.flatten(),
+            #     ignore_index=0,
+            # )
             # scaler.scale(loss + prior_dis_loss * 100).backward()
-            scaler.scale(loss + prior_loss + prior_dis_loss * 100).backward()
+            scaler.scale(loss + prior_dis_loss * 10).backward()
             scaler.step(optimizer)
             scaler.update()
             schedular.step()
             optimizer.zero_grad()
-            total_loss = (
-                loss.item() + prior_loss.item() + prior_dis_loss.item() * 100
-            ) / 3
+            # total_loss = (loss.item() + prior_loss.item()) / 2
             progress.set_postfix(
                 {
-                    "loss": total_loss,
-                    "cur_dis": (loss.item() + prior_loss.item()) / 2
-                    - prior_dis_loss.item() * 100,
+                    "loss": loss.item(),
+                    "dis": prior_dis_loss.item(),
                 }
             )
             progress.update()
-            train_loss_sum += total_loss
+            train_loss_sum += loss.item()
             log_iters = len(dataloader) // 5 if len(dataloader) > 5 else len(dataloader)
             if (idx + 1) % (log_iters) == 0:
                 print(
