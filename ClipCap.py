@@ -198,7 +198,6 @@ class MappingNetwork(nn.Module):
         Return:
             the embeddings of prefix with the shape of (batch_size, prefix_length, d_model)
         """
-        tmp = self.linear(x)
         # 100, 10, 768
         x = self.linear(x).view(
             x.shape[0], self.clip_project_length, -1
@@ -299,6 +298,7 @@ class ClipCaptionModel(nn.Module):
         caption_tokens: torch.Tensor,
         hard_prompts_length: Optional[List] = None,
         mask: Optional[torch.Tensor] = None,
+        use_prior: Optional[bool] = False,
     ) -> Tuple[torch.Tensor, ...]:
         """
         Args:
@@ -352,21 +352,24 @@ class ClipCaptionModel(nn.Module):
         out = self.gpt(
             inputs_embeds=embeddings.type(self.gpt.dtype), attention_mask=mask
         )
-        # done:验证可行性
-        # 80, 768
-        # priored_samlpe = self.prior.sample(captions_clip_tokens)
-        # priored_embeddings = self.mapping_network(priored_samlpe).view(
-        #     -1, self.continuous_length, self.gpt_hidden_size
-        # )
-        # loss = nn.MSELoss()
-        # prior_loss = loss(continuous_embeddings, priored_embeddings)
-        # prior_embedding = torch.cat((priored_embeddings, caption_embeddings), dim=1)
-        # prior_out = self.gpt(
-        #     inputs_embeds=prior_embedding.type(self.gpt.dtype), attention_mask=mask
-        # )
-        # prior_logits = prior_out.logits
-        prior_logits = 0
-        prior_loss = 0
+        if use_prior:
+            # 使用prior对caption进行采样
+            priored_samlpe = self.prior.sample(
+                captions_clip_tokens, num_samples_per_batch=1
+            )
+            priored_embeddings = self.mapping_network(priored_samlpe).view(
+                -1, self.continuous_length, self.gpt_hidden_size
+            )
+            loss = nn.MSELoss()
+            prior_loss = loss(continuous_embeddings, priored_embeddings)
+            prior_embedding = torch.cat((priored_embeddings, caption_embeddings), dim=1)
+            prior_out = self.gpt(
+                inputs_embeds=prior_embedding.type(self.gpt.dtype), attention_mask=mask
+            )
+            prior_logits = prior_out.logits
+        else:
+            prior_loss = 0
+            prior_logits = 0
 
         return out.logits, prior_logits, prior_loss
 

@@ -119,6 +119,7 @@ def train(
                         captions_gpt_tokens,
                         hard_prompts_length,
                         masks,
+                        args.use_prior,
                     )
                     # (batch_size, max_length, vocab_size)
                     # logits = outputs.logits
@@ -129,6 +130,7 @@ def train(
                         continuous_prefix,
                         captions_gpt_tokens,
                         mask=masks,
+                        use_prior=args.use_prior,
                     )
                     # (batch_size, max_length, vocab_size)
                     # logits = outputs.logits
@@ -143,14 +145,15 @@ def train(
                 captions_tokens_for_loss.flatten(),
                 ignore_index=0,
             )
-            # prior_loss = nnf.cross_entropy(
-            #     prior_logits.reshape(-1, prior_logits.shape[-1]),
-            #     captions_tokens_for_loss.flatten(),
-            #     ignore_index=0,
-            # )
-            # scaler.scale(loss + prior_dis_loss * 100).backward()
-            # scaler.scale(loss + prior_dis_loss * 10).backward()
-            scaler.scale(loss).backward()
+            if args.use_prior:
+                prior_loss = nnf.cross_entropy(
+                    prior_logits.reshape(-1, prior_logits.shape[-1]),
+                    captions_tokens_for_loss.flatten(),
+                    ignore_index=0,
+                )
+                scaler.scale(loss + prior_loss + prior_dis_loss * 10).backward()
+            else:
+                scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
             schedular.step()
@@ -159,7 +162,7 @@ def train(
             progress.set_postfix(
                 {
                     "loss": loss.item(),
-                    # "dis": prior_dis_loss.item(),
+                    "dis": prior_dis_loss.item(),
                 }
             )
             progress.update()
@@ -322,6 +325,12 @@ def main():
         action="store_true",
         default=False,
         help="freezing language models during training",
+    )
+    parser.add_argument(
+        "--use_prior",
+        action="store_true",
+        default=False,
+        help="use prior for soft prompt",
     )
     parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument(
