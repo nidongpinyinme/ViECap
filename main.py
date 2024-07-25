@@ -149,7 +149,8 @@ def train(
             #     ignore_index=0,
             # )
             # scaler.scale(loss + prior_dis_loss * 100).backward()
-            scaler.scale(loss + prior_dis_loss * 10).backward()
+            # scaler.scale(loss + prior_dis_loss * 10).backward()
+            scaler.scale(loss).backward()
             scaler.step(optimizer)
             scaler.update()
             schedular.step()
@@ -158,7 +159,7 @@ def train(
             progress.set_postfix(
                 {
                     "loss": loss.item(),
-                    "dis": prior_dis_loss.item(),
+                    # "dis": prior_dis_loss.item(),
                 }
             )
             progress.update()
