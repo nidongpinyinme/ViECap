@@ -113,7 +113,7 @@ def train(
 
             with torch.cuda.amp.autocast(enabled=args.use_amp):
                 if args.using_hard_prompt:
-                    logits, prior_logits, prior_dis_loss = model(
+                    logits, prior_dis_loss = model(
                         captions_clip_tokens,
                         continuous_prefix,
                         captions_gpt_tokens,
@@ -125,7 +125,7 @@ def train(
                     # logits = outputs.logits
                     # prior_logits = prior_out.logits
                 else:
-                    logits, prior_logits, prior_dis_loss = model(
+                    logits, prior_dis_loss = model(
                         captions_clip_tokens,
                         continuous_prefix,
                         captions_gpt_tokens,
@@ -146,12 +146,7 @@ def train(
                 ignore_index=0,
             )
             if args.use_prior:
-                prior_loss = nnf.cross_entropy(
-                    prior_logits.reshape(-1, prior_logits.shape[-1]),
-                    captions_tokens_for_loss.flatten(),
-                    ignore_index=0,
-                )
-                scaler.scale(loss + prior_loss + prior_dis_loss * 10).backward()
+                scaler.scale(loss + prior_dis_loss * 10).backward()
             else:
                 scaler.scale(loss).backward()
             scaler.step(optimizer)

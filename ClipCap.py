@@ -349,9 +349,7 @@ class ClipCaptionModel(nn.Module):
             embeddings = torch.cat(
                 (continuous_embeddings, caption_embeddings), dim=1
             )  # (b, continuous_length + caption_length, gpt_hidden_size)
-        out = self.gpt(
-            inputs_embeds=embeddings.type(self.gpt.dtype), attention_mask=mask
-        )
+
         if use_prior:
             # 使用prior对caption进行采样
             priored_samlpe = self.prior.sample(
@@ -363,15 +361,18 @@ class ClipCaptionModel(nn.Module):
             loss = nn.MSELoss()
             prior_loss = loss(continuous_embeddings, priored_embeddings)
             prior_embedding = torch.cat((priored_embeddings, caption_embeddings), dim=1)
-            prior_out = self.gpt(
+            out = self.gpt(
                 inputs_embeds=prior_embedding.type(self.gpt.dtype), attention_mask=mask
             )
-            prior_logits = prior_out.logits
+            # prior_logits = prior_out.logits
         else:
             prior_loss = 0
-            prior_logits = 0
+            out = self.gpt(
+                inputs_embeds=embeddings.type(self.gpt.dtype), attention_mask=mask
+            )
+        out_logits = out.logits
 
-        return out.logits, prior_logits, prior_loss
+        return out_logits, prior_loss
 
 
 class ClipCaptionPrefix(ClipCaptionModel):

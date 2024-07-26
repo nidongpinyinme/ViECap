@@ -19,12 +19,14 @@ mkdir -p $out_dir
 echo "=====================training============================="
 echo "RUNNING EXPERIMENTS: $log_name, saving in $out_dir"
 
-echo "python main.py --epochs 1 --out_dir $out_dir/checkpoints/ --frozen_gpt| tee -a  ${LOG_FILE}"
-python main.py --epochs 1 --out_dir $out_dir/checkpoints/ --frozen_gpt| tee -a  ${LOG_FILE}
+train_command="python main.py --epochs 4 --out_dir $out_dir/checkpoints/ --use_prior --frozen_gpt| tee -a  ${LOG_FILE}"
+eval $train_command
 
 echo "=======================Validation=========================="
-echo "python validation.py  --weight_path $out_dir/checkpoints/ --out_path $out_dir/outputs | tee -a  ${LOG_FILE}"
-python validation.py  --weight_path $out_dir/checkpoints/  --out_path $out_dir/outputs | tee -a  ${LOG_FILE}
+val_command="python validation.py  --weight_path $out_dir/checkpoints/ --out_path $out_dir/outputs | tee -a  ${LOG_FILE}"
+eval $val_command
+
 echo "=======================Evaluation=========================="
-echo "python ../evaluation/cocoeval.py --result_file_path $out_dir/outputs | tee -a  ${LOG_FILE}"
-python ../evaluation/cocoeval.py --result_file_path $out_dir/outputs | tee -a  ${LOG_FILE}    
+eva_command="python ../evaluation/cocoeval.py --result_file_path $out_dir/outputs --eval_file_name ${TIME_START}| tee -a  ${LOG_FILE}"
+eval $eva_command
+echo "==========================Done============================="
