@@ -114,6 +114,7 @@ def train(
             with torch.cuda.amp.autocast(enabled=args.use_amp):
                 if args.using_hard_prompt:
                     logits, prior_dis_loss = model(
+                        # todo：captions_clip_tokens没有适配使用args.using_clip_features的情况
                         captions_clip_tokens,
                         continuous_prefix,
                         captions_gpt_tokens,
@@ -146,20 +147,26 @@ def train(
                 ignore_index=0,
             )
             if args.use_prior:
-                scaler.scale(loss + prior_dis_loss * 10).backward()
+                scaler.scale(loss + prior_dis_loss).backward()
+                progress.set_postfix(
+                    {
+                        "loss": loss.item(),
+                        "dis": prior_dis_loss.item(),
+                    }
+                )
             else:
                 scaler.scale(loss).backward()
+                progress.set_postfix(
+                    {
+                        "loss": loss.item(),
+                    }
+                )
             scaler.step(optimizer)
             scaler.update()
             schedular.step()
             optimizer.zero_grad()
             # total_loss = (loss.item() + prior_loss.item()) / 2
-            progress.set_postfix(
-                {
-                    "loss": loss.item(),
-                    "dis": prior_dis_loss.item(),
-                }
-            )
+
             progress.update()
             train_loss_sum += loss.item()
             log_iters = len(dataloader) // 5 if len(dataloader) > 5 else len(dataloader)
