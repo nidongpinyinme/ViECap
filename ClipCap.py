@@ -355,6 +355,7 @@ class ClipCaptionModel(nn.Module):
             priored_samlpe = self.prior.sample(
                 captions_clip_tokens, num_samples_per_batch=1
             )
+            priored_samlpe /= priored_samlpe.norm(dim=-1, keepdim=True)
             priored_embeddings = self.mapping_network(priored_samlpe).view(
                 -1, self.continuous_length, self.gpt_hidden_size
             )
