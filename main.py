@@ -73,6 +73,7 @@ def train(
         print(f">>> Training epoch {epoch}")
         progress = tqdm(total=len(dataloader), desc=output_prefix)
         train_loss_sum = 0
+        dis_sum = 0
         # training
         for idx, (
             # 100, 768
@@ -110,11 +111,11 @@ def train(
                 captions_tokens_for_loss.to(device),
                 masks.to(device),
             )
-
+            if not args.use_prior:
+                captions_clip_tokens = []
             with torch.cuda.amp.autocast(enabled=args.use_amp):
                 if args.using_hard_prompt:
                     logits, prior_dis_loss = model(
-                        # todo：captions_clip_tokens没有适配使用args.using_clip_features的情况
                         captions_clip_tokens,
                         continuous_prefix,
                         captions_gpt_tokens,
@@ -147,11 +148,13 @@ def train(
                 ignore_index=0,
             )
             if args.use_prior:
-                scaler.scale(loss + prior_dis_loss).backward()
+                scaler.scale(loss).backward()
+                dis_loss = prior_dis_loss.item()
+                # scaler.scale(loss + prior_dis_loss).backward()
                 progress.set_postfix(
                     {
                         "loss": loss.item(),
-                        "dis": prior_dis_loss.item(),
+                        "dis": dis_loss,
                     }
                 )
             else:
@@ -161,6 +164,8 @@ def train(
                         "loss": loss.item(),
                     }
                 )
+                dis_loss = 0
+
             scaler.step(optimizer)
             scaler.update()
             schedular.step()
@@ -169,14 +174,16 @@ def train(
 
             progress.update()
             train_loss_sum += loss.item()
+            dis_sum += dis_loss
             log_iters = len(dataloader) // 5 if len(dataloader) > 5 else len(dataloader)
             if (idx + 1) % (log_iters) == 0:
                 print(
-                    "epoch {}, iter {}, average train loss: {}".format(
-                        epoch, idx, train_loss_sum / log_iters
+                    "epoch {}, iter {}, gpt loss: {}, dis:{}".format(
+                        epoch, idx, train_loss_sum / log_iters, dis_sum / log_iters
                     )
                 )
                 train_loss_sum = 0
+                dis_sum = 0
                 torch.save(
                     model.state_dict(),
                     os.path.join(output_dir, f"{output_prefix}_latest.pt"),
@@ -357,7 +364,7 @@ def main():
         set_seed(args.random_seed)
 
     # 适配L14
-    clip_hidden_size = 640 if args.is_rn else 768
+    clip_hidden_size = 512 if args.clip_model == "ViT-B/32" else 768
     # clip_hidden_size = 640 if args.is_rn else 512
 
     datasets = CaptionsDataset(

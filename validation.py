@@ -188,6 +188,17 @@ def validation_coco_flickr30k(
             image_features = encoder.encode_image(image).float()
 
         image_features /= image_features.norm(2, dim=-1, keepdim=True)
+
+        # 比较图像编码和相应描述使用prior采样后的相似度
+        # test_caption = captions[0]
+        # clip_tokens = clip.tokenize(test_caption, truncate=True).to(device)
+        # priored_samlpe = model.prior.sample(
+        #     clip_tokens,
+        #     num_samples_per_batch=1,
+        # )
+        # priored_samlpe /= priored_samlpe.norm(dim=-1, keepdim=True)
+        # image_features = priored_samlpe
+
         continuous_embeddings = model.mapping_network(image_features).view(
             -1, args.continuous_prompt_length, model.gpt_hidden_size
         )
@@ -252,12 +263,11 @@ def validation_coco_flickr30k(
         predict["captions"] = captions
         predict["prediction"] = sentence
         predicts.append(predict)
+    # print("dis_loss: ", dis_loss / len(annotations))
     # 检查路径是否存在
     if not os.path.exists(args.out_path):
         os.makedirs(args.out_path)
-    out_json_path = os.path.join(
-        args.out_path, f"{args.name_of_datasets}_{tag}_generated_captions.json"
-    )
+    out_json_path = os.path.join(args.out_path, f"{tag}.json")
     with open(out_json_path, "w") as outfile:
         json.dump(predicts, outfile, indent=4)
 
@@ -268,7 +278,7 @@ def main(args) -> None:
     device = args.device
     clip_name = args.clip_model.replace("/", "")
     # 适配L14
-    clip_hidden_size = 640 if "RN" in args.clip_model else 768
+    clip_hidden_size = 512 if args.clip_model == "ViT-B/32" else 768
     # clip_hidden_size = 640 if "RN" in args.clip_model else 512
 
     # loading categories vocabulary for objects
@@ -364,17 +374,22 @@ def main(args) -> None:
         clip_hidden_size,
         gpt_type=args.language_model,
     )
-    # 获取weight_path路径下所有pt文件
-    weight_files = os.listdir(args.weight_path)
-    weight_files = [
-        f for f in weight_files if f.endswith(".pt") and not f.endswith("latest.pt")
-    ]
+    if args.weight_path.endswith(".pt"):
+        # 直接加载指定权重文件
+        weight_files = [args.weight_path]
+    else:
+        # 获取weight_path路径下所有pt文件
+        weight_files = os.listdir(args.weight_path)
+        weight_files = [
+            os.path.join(args.weight_path, f)
+            for f in weight_files
+            if f.endswith(".pt") and not f.endswith("latest.pt")
+        ]
 
     for file in weight_files:
-        model.load_state_dict(
-            torch.load(os.path.join(args.weight_path, file), map_location=device)
-        )
-
+        model.load_state_dict(torch.load(file, map_location=device))
+        # 只保留文件名
+        file = file.split("/")[-1]
         model.to(device)
         if not args.using_image_features:
             encoder, preprocess = clip.load(args.clip_model, device=device)
@@ -428,6 +443,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--device", default="cuda:0")
+    # parser.add_argument("--clip_model", default="ViT-B/32")
     parser.add_argument("--clip_model", default="ViT-L/14")
     parser.add_argument("--language_model", default="gpt2")
     parser.add_argument("--continuous_prompt_length", type=int, default=10)
@@ -466,7 +482,10 @@ if __name__ == "__main__":
         ),
     )
     parser.add_argument("--prompt_ensemble", action="store_true", default=True)
-    parser.add_argument("--weight_path", default="./checkpoints/2024-07-21_09-47-08/")
+    parser.add_argument(
+        "--weight_path",
+        default="test/2024-07-29-11-38-15/checkpoints/coco_prefix-005.pt",
+    )
 
     now = datetime.datetime.now()
     date_time_str = now.strftime("%Y-%m-%d_%H-%M-%S")
