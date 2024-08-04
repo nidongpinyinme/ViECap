@@ -20,7 +20,7 @@ def main(args) -> None:
     device = args.device
     clip_name = args.clip_model.replace("/", "")
     # 适配L14
-    clip_hidden_size = 640 if args.is_rn else 768
+    clip_hidden_size = 512 if args.is_rn else 768
     # clip_hidden_size = 640 if args.is_rn else 512
 
     # loading categories vocabulary for objects

@@ -48,6 +48,7 @@ def main(datasets, encoder, proprecess, annotations, outpath):
 if __name__ == "__main__":
 
     device = "cuda:0"
+    # clip_type = "ViT-B/32"
     clip_type = "ViT-L/14"
     clip_name = clip_type.replace("/", "")
 

@@ -71,6 +71,7 @@ if __name__ == "__main__":
     # entities = load_entities_text('open_image_entities', '../../../dataset/annotations/vocabulary/oidv7-class-descriptions-boxable.csv')
 
     device = "cuda:0"
+    # clip_type = "ViT-B/32"
     clip_type = "ViT-L/14"
     clip_name = clip_type.replace("/", "")
     # outpath = f"../../../dataset/annotations/vocabulary/vgoi_embeddings_{clip_name}_with_ensemble.pickle"
