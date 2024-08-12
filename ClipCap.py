@@ -295,7 +295,7 @@ class ClipCaptionModel(nn.Module):
         self,
         captions_clip_tokens: torch.Tensor,
         continuous_prompt: torch.Tensor,
-        caption_tokens: torch.Tensor,
+        caption_gpt_tokens: torch.Tensor,
         hard_prompts_length: Optional[List] = None,
         mask: Optional[torch.Tensor] = None,
         use_prior: Optional[bool] = False,
@@ -304,7 +304,7 @@ class ClipCaptionModel(nn.Module):
         Args:
             captions_clip_tokens: tokenized captions with a shape of (b, max_length_per_caption)
             continuous_prompt: tensor with a shape of (b, clip_hidden_size), in text-only training, the caption features are eaxtracted from CLIP and used as image features
-            caption_tokens: caption tokens with a shape of (b, max_length_per_caption)
+            caption_gpt_tokens: caption tokens with a shape of (b, max_length_per_caption)
             hard_prompts_length: list with len = batch size, the length of hard prompts constructed for each caption
             mask: tensor with a shape of (b, discrete_length + continuous_length + max_length_per_caption), valid texts for attention computing
         Return:
@@ -312,15 +312,27 @@ class ClipCaptionModel(nn.Module):
         """
         # caption_embeddings 用作硬提示，其中前一部分为提示向量，后一部分无意义，提示向量长度由hard_prompts_length控制
         # continuous_embeddings 用作软提示
-        # 100, 63, 768
-        caption_embeddings = self.word_embed(caption_tokens)
-        # 80, 10, 768
+        caption_embeddings = self.word_embed(caption_gpt_tokens)
         continuous_embeddings = self.mapping_network(continuous_prompt).view(
             # (b, continuous_length, gpt_hidden_size)
             -1,
             self.continuous_length,
             self.gpt_hidden_size,
         )
+        if use_prior:
+            # 使用prior对caption进行采样
+            priored_samlpe = self.prior.sample(
+                captions_clip_tokens, num_samples_per_batch=1
+            )
+            priored_samlpe /= priored_samlpe.norm(dim=-1, keepdim=True)
+            priored_embeddings = self.mapping_network(priored_samlpe).view(
+                -1, self.continuous_length, self.gpt_hidden_size
+            )
+            loss = nn.MSELoss()
+            prior_loss = loss(continuous_embeddings, priored_embeddings)
+            continuous_embeddings = priored_embeddings
+        else:
+            prior_loss = 0
 
         if hard_prompts_length is not None:  # with hard prompts
             if self.only_hard_prompt:
@@ -350,27 +362,20 @@ class ClipCaptionModel(nn.Module):
                 (continuous_embeddings, caption_embeddings), dim=1
             )  # (b, continuous_length + caption_length, gpt_hidden_size)
 
-        if use_prior:
-            # 使用prior对caption进行采样
-            priored_samlpe = self.prior.sample(
-                captions_clip_tokens, num_samples_per_batch=1
-            )
-            priored_samlpe /= priored_samlpe.norm(dim=-1, keepdim=True)
-            priored_embeddings = self.mapping_network(priored_samlpe).view(
-                -1, self.continuous_length, self.gpt_hidden_size
-            )
-            loss = nn.MSELoss()
-            prior_loss = loss(continuous_embeddings, priored_embeddings)
-            prior_embedding = torch.cat((priored_embeddings, caption_embeddings), dim=1)
-            out = self.gpt(
-                inputs_embeds=prior_embedding.type(self.gpt.dtype), attention_mask=mask
-            )
-            # prior_logits = prior_out.logits
-        else:
-            prior_loss = 0
-            out = self.gpt(
-                inputs_embeds=embeddings.type(self.gpt.dtype), attention_mask=mask
-            )
+        # if use_prior:
+        #     prior_embedding = torch.cat((priored_embeddings, caption_embeddings), dim=1)
+        #     out = self.gpt(
+        #         inputs_embeds=prior_embedding.type(self.gpt.dtype), attention_mask=mask
+        #     )
+        #     # prior_logits = prior_out.logits
+        # else:
+        #     prior_loss = 0
+        #     out = self.gpt(
+        #         inputs_embeds=embeddings.type(self.gpt.dtype), attention_mask=mask
+        #     )
+        out = self.gpt(
+            inputs_embeds=embeddings.type(self.gpt.dtype), attention_mask=mask
+        )
         out_logits = out.logits
 
         return out_logits, prior_loss

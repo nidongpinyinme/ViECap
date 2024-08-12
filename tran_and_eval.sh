@@ -19,7 +19,8 @@ mkdir -p $out_dir
 echo "=====================training============================="
 echo "RUNNING EXPERIMENTS: $log_name, saving in $out_dir"
 
-train_command="python main.py --epochs 5 --out_dir $out_dir/checkpoints/ --use_prior --using_hard_prompt --soft_prompt_first --frozen_gpt| tee -a  ${LOG_FILE}"
+train_command="python main.py --epochs 3 --use_prior --checkpoint test/2024-08-08-15-14-42/checkpoints/coco_prefix_latest.pt --out_dir $out_dir/checkpoints/ --using_hard_prompt --soft_prompt_first --frozen_gpt| tee -a  ${LOG_FILE}"
+# train_command="python main.py --epochs 3 --use_prior  --out_dir $out_dir/checkpoints/ --using_hard_prompt --soft_prompt_first --frozen_gpt| tee -a  ${LOG_FILE}"
 echo $train_command
 eval $train_command
 echo $?
