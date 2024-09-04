@@ -761,11 +761,11 @@ if __name__ == "__main__":
         "vinvl_vgoi_entities",
     ]
     entities_path = [
-        "../../../dataset/annotations/vocabulary/all_objects_attributes_relationships.pickle",
-        "../../../dataset/annotations/vocabulary/coco_categories.json",
-        "../../../dataset/annotations/vocabulary/oidv7-class-descriptions-boxable.csv",
-        "../../../dataset/annotations/vocabulary/VG-SGG-dicts-vgoi6-clipped.json",
-        "../../../dataset/annotations/vocabulary/vgcocooiobjects_v1_class2ind.json",
+        "../../../dataset/annotations/all_objects_attributes_relationships.pickle",
+        "../../../dataset/annotations/coco_categories.json",
+        "../../../dataset/annotations/oidv7-class-descriptions-boxable.csv",
+        "../../../dataset/annotations/VG-SGG-dicts-vgoi6-clipped.json",
+        "../../../dataset/annotations/vgcocooiobjects_v1_class2ind.json",
     ]
     # using all entities text
     entities_idx = 4

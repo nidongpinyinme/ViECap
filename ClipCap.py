@@ -313,6 +313,7 @@ class ClipCaptionModel(nn.Module):
         # caption_embeddings 用作硬提示，其中前一部分为提示向量，后一部分无意义，提示向量长度由hard_prompts_length控制
         # continuous_embeddings 用作软提示
         caption_embeddings = self.word_embed(caption_gpt_tokens)
+        # 32 * 768 -> 32 * 10 * 768
         continuous_embeddings = self.mapping_network(continuous_prompt).view(
             # (b, continuous_length, gpt_hidden_size)
             -1,
@@ -322,7 +323,7 @@ class ClipCaptionModel(nn.Module):
         if use_prior:
             # 使用prior对caption进行采样
             priored_samlpe = self.prior.sample(
-                captions_clip_tokens, num_samples_per_batch=1
+                captions_clip_tokens, num_samples_per_batch=2
             )
             priored_samlpe /= priored_samlpe.norm(dim=-1, keepdim=True)
             priored_embeddings = self.mapping_network(priored_samlpe).view(
@@ -330,19 +331,23 @@ class ClipCaptionModel(nn.Module):
             )
             loss = nn.MSELoss()
             prior_loss = loss(continuous_embeddings, priored_embeddings)
-            continuous_embeddings = priored_embeddings
+            # continuous_embeddings = priored_embeddings
         else:
             prior_loss = 0
 
         if hard_prompts_length is not None:  # with hard prompts
             if self.only_hard_prompt:
-                embeddings = caption_embeddings
+                embeddings_origin = caption_embeddings
             elif self.soft_prompt_first:  # soft prompts + hard prompts
-                embeddings = torch.cat(
+                embeddings_origin = torch.cat(
                     (continuous_embeddings, caption_embeddings), dim=1
                 )
+                if use_prior:
+                    embeddings_prior = torch.cat(
+                        (priored_embeddings, caption_embeddings), dim=1
+                    )
             else:  # hard prompts + soft prompts
-                embeddings = None
+                embeddings_origin = None
                 for i in range(len(hard_prompts_length)):
                     length = hard_prompts_length[i]
                     temp_embeddings = torch.cat(
@@ -353,32 +358,30 @@ class ClipCaptionModel(nn.Module):
                         ),
                         dim=0,
                     ).unsqueeze(dim=0)
-                    if embeddings is None:
-                        embeddings = temp_embeddings
+                    if embeddings_origin is None:
+                        embeddings_origin = temp_embeddings
                     else:
-                        embeddings = torch.cat((embeddings, temp_embeddings), dim=0)
+                        embeddings_origin = torch.cat(
+                            (embeddings_origin, temp_embeddings), dim=0
+                        )
         else:  # without hard prompts
-            embeddings = torch.cat(
+            embeddings_origin = torch.cat(
                 (continuous_embeddings, caption_embeddings), dim=1
             )  # (b, continuous_length + caption_length, gpt_hidden_size)
 
-        # if use_prior:
-        #     prior_embedding = torch.cat((priored_embeddings, caption_embeddings), dim=1)
-        #     out = self.gpt(
-        #         inputs_embeds=prior_embedding.type(self.gpt.dtype), attention_mask=mask
-        #     )
-        #     # prior_logits = prior_out.logits
-        # else:
-        #     prior_loss = 0
-        #     out = self.gpt(
-        #         inputs_embeds=embeddings.type(self.gpt.dtype), attention_mask=mask
-        #     )
-        out = self.gpt(
-            inputs_embeds=embeddings.type(self.gpt.dtype), attention_mask=mask
+        out_origin = self.gpt(
+            inputs_embeds=embeddings_origin.type(self.gpt.dtype), attention_mask=mask
         )
-        out_logits = out.logits
+        if use_prior:
+            out_prior = self.gpt(
+                inputs_embeds=embeddings_prior.type(self.gpt.dtype), attention_mask=mask
+            )
 
-        return out_logits, prior_loss
+            # out_logits = out_origin.logits
+
+            return out_origin.logits, out_prior.logits, prior_loss
+        else:
+            return out_origin.logits, 0, prior_loss
 
 
 class ClipCaptionPrefix(ClipCaptionModel):

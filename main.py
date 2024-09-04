@@ -66,8 +66,13 @@ def train(
         num_training_steps=epochs * len(dataloader),
     )
     scaler = torch.cuda.amp.GradScaler(enabled=args.use_amp)
-
+    use_prior = args.use_prior
     for epoch in range(epochs):
+        if epoch != epochs - 1:
+            # 只在第一个epoch使用prior
+            use_prior = False
+        else:
+            use_prior = args.use_prior
         # visualization
         sys.stdout.flush()
         print(f">>> Training epoch {epoch}")
@@ -111,28 +116,28 @@ def train(
                 captions_tokens_for_loss.to(device),
                 masks.to(device),
             )
-            if not args.use_prior:
+            if not use_prior:
                 captions_clip_tokens = []
             with torch.cuda.amp.autocast(enabled=args.use_amp):
                 if args.using_hard_prompt:
-                    logits, prior_dis_loss = model(
+                    logits_origin, logits_prior, prior_dis_loss = model(
                         captions_clip_tokens,
                         continuous_prefix,
                         captions_gpt_tokens,
                         hard_prompts_length,
                         masks,
-                        args.use_prior,
+                        use_prior,
                     )
                     # (batch_size, max_length, vocab_size)
                     # logits = outputs.logits
                     # prior_logits = prior_out.logits
                 else:
-                    logits, prior_dis_loss = model(
+                    logits_origin, logits_prior, prior_dis_loss = model(
                         captions_clip_tokens,
                         continuous_prefix,
                         captions_gpt_tokens,
                         mask=masks,
-                        use_prior=args.use_prior,
+                        use_prior=use_prior,
                     )
                     # (batch_size, max_length, vocab_size)
                     # logits = outputs.logits
@@ -142,26 +147,35 @@ def train(
             )
 
             # ignore_index = target, value: specifying a target value that is ignored and does not contribute to the input gradient
-            loss = nnf.cross_entropy(
-                logits.reshape(-1, logits.shape[-1]),
+            loss_origin = nnf.cross_entropy(
+                logits_origin.reshape(-1, logits_origin.shape[-1]),
                 captions_tokens_for_loss.flatten(),
                 ignore_index=0,
             )
-            if args.use_prior:
-                scaler.scale(loss).backward()
+
+            if use_prior:
+                loss_prior = nnf.cross_entropy(
+                    logits_prior.reshape(-1, logits_prior.shape[-1]),
+                    captions_tokens_for_loss.flatten(),
+                    ignore_index=0,
+                )
+                scale = 0.3
+                # todo:考虑使用动态权重
+                scaler.scale(scale * loss_origin + (1 - scale) * loss_prior).backward()
                 dis_loss = prior_dis_loss.item()
                 # scaler.scale(loss + prior_dis_loss).backward()
                 progress.set_postfix(
                     {
-                        "loss": loss.item(),
+                        "ori_loss": loss_origin.item(),
+                        "pri_loss": loss_prior.item(),
                         "dis": dis_loss,
                     }
                 )
             else:
-                scaler.scale(loss).backward()
+                scaler.scale(loss_origin).backward()
                 progress.set_postfix(
                     {
-                        "loss": loss.item(),
+                        "loss": loss_origin.item(),
                     }
                 )
                 dis_loss = 0
@@ -173,7 +187,7 @@ def train(
             # total_loss = (loss.item() + prior_loss.item()) / 2
 
             progress.update()
-            train_loss_sum += loss.item()
+            train_loss_sum += loss_origin.item()
             dis_sum += dis_loss
             log_iters = len(dataloader) // 5 if len(dataloader) > 5 else len(dataloader)
             if (idx + 1) % (log_iters) == 0:
@@ -199,7 +213,7 @@ def main():
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--bs", type=int, default=80, help="batch size")
+    parser.add_argument("--bs", type=int, default=32, help="batch size")
     parser.add_argument(
         "--lr", type=float, default=2e-5, help="learning rate for training"
     )
@@ -307,7 +321,7 @@ def main():
     )
     parser.add_argument(
         "--path_of_datasets",
-        default="../../../dataset/coco/annotations/coco_with_entities.pickle",
+        default="../../../dataset/annotations/coco_with_entities.pickle",
     )
 
     now = datetime.datetime.now()
@@ -327,7 +341,7 @@ def main():
     parser.add_argument("--name_of_objects_vocabs", default="visual_genome_entities")
     parser.add_argument(
         "--path_of_objects_vocabs",
-        default="../../../dataset/annotations/vocabulary/all_objects_attributes_relationships.pickle",
+        default="../../../dataset/annotations/all_objects_attributes_relationships.pickle",
     )
     parser.add_argument(
         "--frozen_gpt",

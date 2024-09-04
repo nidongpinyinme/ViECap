@@ -130,22 +130,14 @@ def validation_nocaps(
             neardomain.append(predict)
         elif split == "out_domain":
             outdomain.append(predict)
-
-    with open(
-        os.path.join(args.out_path, f"overall_generated_captions.json"), "w"
-    ) as outfile:
+    out_path = args.out_path if args.out_path else args.weight_path
+    with open(os.path.join(out_path, f"overall.json"), "w") as outfile:
         json.dump(overall, outfile, indent=4)
-    with open(
-        os.path.join(args.out_path, f"indomain_generated_captions.json"), "w"
-    ) as outfile:
+    with open(os.path.join(out_path, f"indomain.json"), "w") as outfile:
         json.dump(indomain, outfile, indent=4)
-    with open(
-        os.path.join(args.out_path, f"neardomain_generated_captions.json"), "w"
-    ) as outfile:
+    with open(os.path.join(out_path, f"neardomain.json"), "w") as outfile:
         json.dump(neardomain, outfile, indent=4)
-    with open(
-        os.path.join(args.out_path, f"outdomain_generated_captions.json"), "w"
-    ) as outfile:
+    with open(os.path.join(out_path, f"outdomain.json"), "w") as outfile:
         json.dump(outdomain, outfile, indent=4)
 
 
@@ -265,9 +257,10 @@ def validation_coco_flickr30k(
         predicts.append(predict)
     # print("dis_loss: ", dis_loss / len(annotations))
     # 检查路径是否存在
-    if not os.path.exists(args.out_path):
-        os.makedirs(args.out_path)
-    out_json_path = os.path.join(args.out_path, f"{tag}.json")
+    out_path = args.out_path if args.out_path else args.weight_path
+    if not os.path.exists(out_path):
+        os.makedirs(out_path)
+    out_json_path = os.path.join(out_path, f"{tag}.json")
     with open(out_json_path, "w") as outfile:
         json.dump(predicts, outfile, indent=4)
 
@@ -285,82 +278,84 @@ def main(args) -> None:
     if args.name_of_entities_text == "visual_genome_entities":
         entities_text = load_entities_text(
             args.name_of_entities_text,
-            "../../../dataset/annotations/vocabulary/all_objects_attributes_relationships.pickle",
+            "../../../dataset/annotations/all_objects_attributes_relationships.pickle",
             not args.disable_all_entities,
         )
         if args.prompt_ensemble:  # loading ensemble embeddings
             texts_embeddings = clip_texts_embeddings(
                 entities_text,
-                f"../../../dataset/annotations/vocabulary/visual_genome_embedding_{clip_name}_with_ensemble.pickle",
+                f"../../../dataset/annotations/visual_genome_embedding_{clip_name}_with_ensemble.pickle",
             )
         else:
             texts_embeddings = clip_texts_embeddings(
                 entities_text,
-                f"../../../dataset/annotations/vocabulary/visual_genome_embedding_{clip_name}.pickle",
+                f"../../../dataset/annotations/visual_genome_embedding_{clip_name}.pickle",
             )
     elif args.name_of_entities_text == "coco_entities":
         entities_text = load_entities_text(
             args.name_of_entities_text,
-            "../../../dataset/annotations/vocabulary/coco_categories.json",
+            "../../../dataset/annotations/coco_categories.json",
             not args.disable_all_entities,
         )
         if args.prompt_ensemble:
             texts_embeddings = clip_texts_embeddings(
                 entities_text,
-                f"../../../dataset/annotations/vocabulary/coco_embeddings_{clip_name}_with_ensemble.pickle",
+                f"../../../dataset/annotations/coco_embeddings_{clip_name}_with_ensemble.pickle",
             )
         else:
             texts_embeddings = clip_texts_embeddings(
                 entities_text,
-                f"../../../dataset/annotations/vocabulary/coco_embeddings_{clip_name}.pickle",
+                f"../../../dataset/annotations/coco_embeddings_{clip_name}.pickle",
             )
     elif args.name_of_entities_text == "open_image_entities":
         entities_text = load_entities_text(
             args.name_of_entities_text,
-            "../../../dataset/annotations/vocabulary/oidv7-class-descriptions-boxable.csv",
+            "../../../dataset/annotations/oidv7-class-descriptions-boxable.csv",
             not args.disable_all_entities,
         )
         if args.prompt_ensemble:
             texts_embeddings = clip_texts_embeddings(
                 entities_text,
-                f"../../../dataset/annotations/vocabulary/open_image_embeddings_{clip_name}_with_ensemble.pickle",
+                f"../../../dataset/annotations/open_image_embeddings_{clip_name}_with_ensemble.pickle",
             )
         else:
             texts_embeddings = clip_texts_embeddings(
                 entities_text,
-                f"../../../dataset/annotations/vocabulary/open_image_embeddings_{clip_name}.pickle",
+                f"../../../dataset/annotations/open_image_embeddings_{clip_name}.pickle",
             )
     elif args.name_of_entities_text == "vinvl_vg_entities":
         entities_text = load_entities_text(
             args.name_of_entities_text,
-            "../../../dataset/annotations/vocabulary/VG-SGG-dicts-vgoi6-clipped.json",
+            "../../../dataset/annotations/VG-SGG-dicts-vgoi6-clipped.json",
             not args.disable_all_entities,
         )
         if args.prompt_ensemble:
             texts_embeddings = clip_texts_embeddings(
                 entities_text,
-                f"../../../dataset/annotations/vocabulary/vg_embeddings_{clip_name}_with_ensemble.pickle",
+                f"../../../dataset/annotations/vg_embeddings_{clip_name}_with_ensemble.pickle",
             )
         else:
             texts_embeddings = clip_texts_embeddings(
                 entities_text,
-                f"../../../dataset/annotations/vocabulary/vg_embeddings_{clip_name}.pickle",
+                f"../../../dataset/annotations/vg_embeddings_{clip_name}.pickle",
             )
     elif args.name_of_entities_text == "vinvl_vgoi_entities":
         entities_text = load_entities_text(
             args.name_of_entities_text,
-            "../../../dataset/annotations/vocabulary/vgcocooiobjects_v1_class2ind.json",
+            "../../../dataset/annotations/vgcocooiobjects_v1_class2ind.json",
             not args.disable_all_entities,
         )
         if args.prompt_ensemble:
             texts_embeddings = clip_texts_embeddings(
                 entities_text,
-                f"../../../dataset/annotations/vocabulary/vgoi_embeddings_{clip_name}_with_ensemble.pickle",
+                f"../../../dataset/annotations/vgoi_embeddings_{clip_name}_with_ensemble.pickle",
+                device=device,
+                clip_type=args.clip_model,
             )
         else:
             texts_embeddings = clip_texts_embeddings(
                 entities_text,
-                f"../../../dataset/annotations/vocabulary/vgoi_embeddings_{clip_name}.pickle",
+                f"../../../dataset/annotations/vgoi_embeddings_{clip_name}.pickle",
             )
     else:
         print("The entities text should be input correctly!")
@@ -386,6 +381,7 @@ def main(args) -> None:
             if f.endswith(".pt") and not f.endswith("latest.pt")
         ]
 
+    counter = 0
     for file in weight_files:
         model.load_state_dict(torch.load(file, map_location=device))
         # 只保留文件名
@@ -423,7 +419,7 @@ def main(args) -> None:
                     texts_embeddings,
                     model,
                     tokenizer,
-                    tag=file.replace(".pt", ""),
+                    tag=args.name_of_datasets + "-" + str(counter),
                 )
             else:
                 validation_coco_flickr30k(
@@ -435,8 +431,9 @@ def main(args) -> None:
                     tokenizer,
                     preprocess,
                     encoder,
-                    tag=file.replace(".pt", ""),
+                    tag=args.name_of_datasets + "-" + str(counter),
                 )
+        counter += 1
 
 
 if __name__ == "__main__":
@@ -454,15 +451,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--using_image_features",
         action="store_true",
-        default=False,
+        default=True,
         help="using pre-extracted image features",
     )
     parser.add_argument(
-        "--name_of_datasets", default="coco", choices=("coco", "flickr30k", "nocaps")
+        "--name_of_datasets",
+        default="flickr30k",
+        choices=("coco", "flickr30k", "nocaps"),
     )
     parser.add_argument(
         "--path_of_val_datasets",
-        default="../../../dataset/coco/annotations/test_captions.json",
+        default="../../../dataset/flickr30k/test_captions.json",
     )
     parser.add_argument(
         "--disable_all_entities",
@@ -472,7 +471,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--name_of_entities_text",
-        default="coco_entities",
+        default="vinvl_vgoi_entities",
         choices=(
             "visual_genome_entities",
             "coco_entities",
@@ -484,15 +483,17 @@ if __name__ == "__main__":
     parser.add_argument("--prompt_ensemble", action="store_true", default=True)
     parser.add_argument(
         "--weight_path",
-        default="test/2024-07-29-11-38-15/checkpoints/coco_prefix-005.pt",
+        default="eval/",
     )
 
     now = datetime.datetime.now()
     date_time_str = now.strftime("%Y-%m-%d_%H-%M-%S")
-    parser.add_argument("--image_folder", default="../../../dataset/coco/val2014/")
-    parser.add_argument("--out_path", default="./output/" + date_time_str)
-    parser.add_argument("--using_hard_prompt", action="store_true", default=False)
-    parser.add_argument("--soft_prompt_first", action="store_true", default=False)
+    parser.add_argument(
+        "--image_folder", default="../../../dataset/flickr30k/flickr30k-images/"
+    )
+    parser.add_argument("--out_path", default="")
+    parser.add_argument("--using_hard_prompt", action="store_true", default=True)
+    parser.add_argument("--soft_prompt_first", action="store_true", default=True)
     parser.add_argument("--only_hard_prompt", action="store_true", default=False)
     parser.add_argument(
         "--using_greedy_search",

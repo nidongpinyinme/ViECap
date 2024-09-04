@@ -30,82 +30,82 @@ def main(args) -> None:
     if args.name_of_entities_text == "visual_genome_entities":
         entities_text = load_entities_text(
             args.name_of_entities_text,
-            "../../../dataset/annotations/vocabulary/all_objects_attributes_relationships.pickle",
+            "../../../dataset/annotations/all_objects_attributes_relationships.pickle",
             not args.disable_all_entities,
         )
         if args.prompt_ensemble:  # loading ensemble embeddings
             texts_embeddings = clip_texts_embeddings(
                 entities_text,
-                f"../../../dataset/annotations/vocabulary/visual_genome_embedding_{clip_name}_with_ensemble.pickle",
+                f"../../../dataset/annotations/visual_genome_embedding_{clip_name}_with_ensemble.pickle",
             )
         else:
             texts_embeddings = clip_texts_embeddings(
                 entities_text,
-                f"../../../dataset/annotations/vocabulary/visual_genome_embedding_{clip_name}.pickle",
+                f"../../../dataset/annotations/visual_genome_embedding_{clip_name}.pickle",
             )
     elif args.name_of_entities_text == "coco_entities":
         entities_text = load_entities_text(
             args.name_of_entities_text,
-            "../../../dataset/annotations/vocabulary/coco_categories.json",
+            "../../../dataset/annotations/coco_categories.json",
             not args.disable_all_entities,
         )
         if args.prompt_ensemble:
             texts_embeddings = clip_texts_embeddings(
                 entities_text,
-                f"../../../dataset/annotations/vocabulary/coco_embeddings_{clip_name}_with_ensemble.pickle",
+                f"../../../dataset/annotations/coco_embeddings_{clip_name}_with_ensemble.pickle",
             )
         else:
             texts_embeddings = clip_texts_embeddings(
                 entities_text,
-                f"../../../dataset/annotations/vocabulary/coco_embeddings_{clip_name}.pickle",
+                f"../../../dataset/annotations/coco_embeddings_{clip_name}.pickle",
             )
     elif args.name_of_entities_text == "open_image_entities":
         entities_text = load_entities_text(
             args.name_of_entities_text,
-            "../../../dataset/annotations/vocabulary/oidv7-class-descriptions-boxable.csv",
+            "../../../dataset/annotations/oidv7-class-descriptions-boxable.csv",
             not args.disable_all_entities,
         )
         if args.prompt_ensemble:
             texts_embeddings = clip_texts_embeddings(
                 entities_text,
-                f"../../../dataset/annotations/vocabulary/open_image_embeddings_{clip_name}_with_ensemble.pickle",
+                f"../../../dataset/annotations/open_image_embeddings_{clip_name}_with_ensemble.pickle",
             )
         else:
             texts_embeddings = clip_texts_embeddings(
                 entities_text,
-                f"../../../dataset/annotations/vocabulary/open_image_embeddings_{clip_name}.pickle",
+                f"../../../dataset/annotations/open_image_embeddings_{clip_name}.pickle",
             )
     elif args.name_of_entities_text == "vinvl_vg_entities":
         entities_text = load_entities_text(
             args.name_of_entities_text,
-            "../../../dataset/annotations/vocabulary/VG-SGG-dicts-vgoi6-clipped.json",
+            "../../../dataset/annotations/VG-SGG-dicts-vgoi6-clipped.json",
             not args.disable_all_entities,
         )
         if args.prompt_ensemble:
             texts_embeddings = clip_texts_embeddings(
                 entities_text,
-                f"../../../dataset/annotations/vocabulary/vg_embeddings_{clip_name}_with_ensemble.pickle",
+                f"../../../dataset/annotations/vg_embeddings_{clip_name}_with_ensemble.pickle",
             )
         else:
             texts_embeddings = clip_texts_embeddings(
                 entities_text,
-                f"../../../dataset/annotations/vocabulary/vg_embeddings_{clip_name}.pickle",
+                f"../../../dataset/annotations/vg_embeddings_{clip_name}.pickle",
             )
     elif args.name_of_entities_text == "vinvl_vgoi_entities":
         entities_text = load_entities_text(
             args.name_of_entities_text,
-            "../../../dataset/annotations/vocabulary/vgcocooiobjects_v1_class2ind.json",
+            "../../../dataset/annotations/vgcocooiobjects_v1_class2ind.json",
             not args.disable_all_entities,
         )
         if args.prompt_ensemble:
             texts_embeddings = clip_texts_embeddings(
                 entities_text,
-                f"../../../dataset/annotations/vocabulary/vgoi_embeddings_{clip_name}_with_ensemble.pickle",
+                f"../../../dataset/annotations/vgoi_embeddings_{clip_name}_with_ensemble.pickle",
             )
         else:
             texts_embeddings = clip_texts_embeddings(
                 entities_text,
-                f"../../../dataset/annotations/vocabulary/vgoi_embeddings_{clip_name}.pickle",
+                f"../../../dataset/annotations/vgoi_embeddings_{clip_name}.pickle",
             )
     else:
         print("The entities text should be input correctly!")

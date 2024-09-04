@@ -61,24 +61,26 @@ if __name__ == "__main__":
 
     # entities = load_entities_text(
     #     "vinvl_vgoi_entities",
-    #     "../../../dataset/annotations/vocabulary/vgcocooiobjects_v1_class2ind.json",
+    #     "../../../dataset/annotations/vgcocooiobjects_v1_class2ind.json",
     # )
     entities = load_entities_text(
-        "coco_entities", "../../../dataset/annotations/vocabulary/coco_categories.json"
+        "coco_entities", "../../../dataset/annotations/coco_categories.json"
     )
-    # entities = load_entities_text('vinvl_vg_entities', '../../../dataset/annotations/vocabulary/VG-SGG-dicts-vgoi6-clipped.json')
-    # entities = load_entities_text('visual_genome_entities', '../../../dataset/annotations/vocabulary/all_objects_attributes_relationships.pickle', all_entities = False)
-    # entities = load_entities_text('open_image_entities', '../../../dataset/annotations/vocabulary/oidv7-class-descriptions-boxable.csv')
+    # entities = load_entities_text('vinvl_vg_entities', '../../../dataset/annotations/VG-SGG-dicts-vgoi6-clipped.json')
+    # entities = load_entities_text('visual_genome_entities', '../../../dataset/annotations/all_objects_attributes_relationships.pickle', all_entities = False)
+    # entities = load_entities_text('open_image_entities', '../../../dataset/annotations/oidv7-class-descriptions-boxable.csv')
 
     device = "cuda:0"
     # clip_type = "ViT-B/32"
     clip_type = "ViT-L/14"
     clip_name = clip_type.replace("/", "")
-    # outpath = f"../../../dataset/annotations/vocabulary/vgoi_embeddings_{clip_name}_with_ensemble.pickle"
-    outpath = f"../../../dataset/annotations/vocabulary/coco_embeddings_{clip_name}_with_ensemble.pickle"
-    # outpath = f'../../../dataset/annotations/vocabulary/vg_embeddings_{clip_name}_with_ensemble.pickle'
-    # outpath = f'../../../dataset/annotations/vocabulary/visual_genome_embedding_{clip_name}_with_ensemble.pickle'
-    # outpath = f'../../../dataset/annotations/vocabulary/open_image_embeddings_{clip_name}_with_ensemble.pickle'
+    # outpath = f"../../../dataset/annotations/vgoi_embeddings_{clip_name}_with_ensemble.pickle"
+    outpath = (
+        f"../../../dataset/annotations/coco_embeddings_{clip_name}_with_ensemble.pickle"
+    )
+    # outpath = f'../../../dataset/annotations/vg_embeddings_{clip_name}_with_ensemble.pickle'
+    # outpath = f'../../../dataset/annotations/visual_genome_embedding_{clip_name}_with_ensemble.pickle'
+    # outpath = f'../../../dataset/annotations/open_image_embeddings_{clip_name}_with_ensemble.pickle'
     embeddings = generate_ensemble_prompt_embeddings(
         device, clip_type, entities, prompt_templates, outpath
     )

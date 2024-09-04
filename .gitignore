@@ -5,3 +5,6 @@ checkpoints/
 logs/
 output/
 test/
+*.json
+*.log
+*.pt

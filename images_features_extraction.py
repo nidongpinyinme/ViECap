@@ -15,7 +15,7 @@ def main(datasets, encoder, proprecess, annotations, outpath):
         if datasets == "coco":
             rootpath = "../../../dataset/coco/val2014/"
         elif datasets == "flickr30k":
-            rootpath = "./annotations/flickr30k/flickr30k-images/"
+            rootpath = "../../../dataset/flickr30k/flickr30k-images/"
 
         for image_id in annotations:
             caption = annotations[image_id]
@@ -29,13 +29,17 @@ def main(datasets, encoder, proprecess, annotations, outpath):
     else:  # nocaps
         # format = [{'split': 'near_domain', 'image_id': '4499.jpg', 'caption': [caption1, caption2, ...]}, ...]
         # format = [[image_path, image_split, image_features, [caption1, captions2, ...]], ...]
-        rootpath = "./annotations/nocaps/"
+        rootpath = "../../../dataset/nocaps/val/"
         for annotation in annotations:
             split = annotation["split"]
             image_id = annotation["image_id"]
             caption = annotation["caption"]
-            image_path = rootpath + split + "/" + image_id
-            image = proprecess(Image.open(image_path)).unsqueeze(dim=0).to(device)
+            image_path = rootpath + image_id
+            try:
+                image = proprecess(Image.open(image_path)).unsqueeze(dim=0).to(device)
+            except:
+                print(image_id)
+                continue
             image_features = (
                 encoder.encode_image(image).squeeze(dim=0).to("cpu")
             )  # clip_hidden_size
@@ -52,32 +56,36 @@ if __name__ == "__main__":
     clip_type = "ViT-L/14"
     clip_name = clip_type.replace("/", "")
 
-    path_nocaps = "./annotations/nocaps/nocaps_corpus.json"
+    path_nocaps = "../../../dataset/nocaps/nocaps_corpus.json"
     path_val_coco = "../../../dataset/coco/annotations/val_captions.json"
     path_test_coco = "../../../dataset/coco/annotations/test_captions.json"
-    path_val_flickr30k = "./annotations/flickr30k/val_captions.json"
-    path_test_flickr30k = "./annotations/flickr30k/test_captions.json"
+    path_val_flickr30k = "../../../dataset/flickr30k/val_captions.json"
+    path_test_flickr30k = "../../../dataset/flickr30k/test_captions.json"
 
-    outpath_nocaps = f"./annotations/nocaps/nocaps_corpus_{clip_name}.pickle"
+    outpath_nocaps = f"../../../dataset/annotations/nocaps_corpus_{clip_name}.pickle"
     outpath_val_coco = (
         f"../../../dataset/coco/annotations/val_captions_{clip_name}.pickle"
     )
     outpath_test_coco = (
         f"../../../dataset/coco/annotations/test_captions_{clip_name}.pickle"
     )
-    outpath_val_flickr30k = f"./annotations/flickr30k/val_captions_{clip_name}.pickle"
-    outpath_test_flickr30k = f"./annotations/flickr30k/test_captions_{clip_name}.pickle"
+    outpath_val_flickr30k = (
+        f"../../../dataset/annotations/flickr30k_val_captions_{clip_name}.pickle"
+    )
+    outpath_test_flickr30k = (
+        f"../../../dataset/annotations/flickr30k_test_captions_{clip_name}.pickle"
+    )
 
     # format = [{'split': 'near_domain', 'image_id': '4499.jpg', 'caption': [caption1, caption2, ...]}, ...]
     # format = [[image_path, image_split, image_features, [caption1, captions2, ...]], ...]
-    # with open(path_nocaps, "r") as infile:
-    #     nocaps = json.load(infile)
+    with open(path_nocaps, "r") as infile:
+        nocaps = json.load(infile)
 
     # format = {image_path: [caption1, caption2, ...]} -> [[image_path, image_features, [caption1, caption2, ...]], ...]
-    with open(path_val_coco, "r") as infile:
-        val_coco = json.load(infile)
-    with open(path_test_coco, "r") as infile:
-        test_coco = json.load(infile)
+    # with open(path_val_coco, "r") as infile:
+    #     val_coco = json.load(infile)
+    # with open(path_test_coco, "r") as infile:
+    #     test_coco = json.load(infile)
     # with open(path_val_flickr30k, "r") as infile:
     #     val_flickr30k = json.load(infile)
     # with open(path_test_flickr30k, "r") as infile:
@@ -85,14 +93,14 @@ if __name__ == "__main__":
 
     encoder, proprecess = clip.load(clip_type, device)
 
-    # if not os.path.exists(outpath_nocaps):
-    #     main("nocaps", encoder, proprecess, nocaps, outpath_nocaps)
+    if not os.path.exists(outpath_nocaps):
+        main("nocaps", encoder, proprecess, nocaps, outpath_nocaps)
 
-    if not os.path.exists(outpath_val_coco):
-        main("coco", encoder, proprecess, val_coco, outpath_val_coco)
+    # if not os.path.exists(outpath_val_coco):
+    #     main("coco", encoder, proprecess, val_coco, outpath_val_coco)
 
-    if not os.path.exists(outpath_test_coco):
-        main("coco", encoder, proprecess, test_coco, outpath_test_coco)
+    # if not os.path.exists(outpath_test_coco):
+    #     main("coco", encoder, proprecess, test_coco, outpath_test_coco)
 
     # if not os.path.exists(outpath_val_flickr30k):
     #     main("flickr30k", encoder, proprecess, val_flickr30k, outpath_val_flickr30k)

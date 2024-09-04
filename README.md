@@ -300,10 +300,10 @@ We have provided the captioning results in the [Releases](https://github.com/Fei
 For example, if you wish to assess the cross-domain captioning performance from COCO to NoCaps, execute the following commands:
 
 ```
-bash language_eval.sh ../checkpoints/train_coco/indomain_generated_captions.json
-bash language_eval.sh ../checkpoints/train_coco/neardomain_generated_captions.json
-bash language_eval.sh ../checkpoints/train_coco/outdomain_generated_captions.json
-bash language_eval.sh ../checkpoints/train_coco/overall_generated_captions.json
+bash language_eval.sh ../checkpoints/train_coco/indomain.json
+bash language_eval.sh ../checkpoints/train_coco/neardomain.json
+bash language_eval.sh ../checkpoints/train_coco/outdomain.json
+bash language_eval.sh ../checkpoints/train_coco/overall.json
 ```
 
 ***
