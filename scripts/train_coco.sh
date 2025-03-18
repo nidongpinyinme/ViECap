@@ -26,7 +26,7 @@ python main.py \
 --language_model gpt2 \
 --using_hard_prompt \
 --soft_prompt_first \
---path_of_datasets ./annotations/coco/coco_texts_features_ViT-B32.pickle \
+--path_of_datasets ../../../dataset/coco/annotations/coco_texts_features_ViT-B32.pickle \
 --out_dir checkpoints/$EXP_NAME \
 --use_amp \
 |& tee -a  ${LOG_FILE}
